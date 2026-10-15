@@ -1,0 +1,658 @@
+<title>Obsessed Card Hand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-screen app. Top bar, task note in the middle, crew hand fanned along the bottom. Drag crew onto tasks. */
+:root {
+  color-scheme: dark;
+  --bg: #1b1730;
+  --surface: #252040;
+  --surface-2: #2e2850;
+  --line: #3a3360;
+  --text: #ece9f7;
+  --muted: #8f88ad;
+  --accent: #7b61ff;
+  --accent-ink: #ffffff;
+  --accent-2: #ff8f8f;
+  --ok: #5fd4a8;
+  --warn: #f2b84b;
+
+  --f-display: "Urbanist", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Urbanist", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-badge: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  --cw: 152px;
+  --ch: 218px;
+}
+.app[data-palette="navy"] {
+  --bg: #050a11;
+  --surface: #0b1220;
+  --surface-2: #122036;
+  --line: #1e2a3e;
+  --text: #d9e4f0;
+  --muted: #7a8ba7;
+  --accent: #3689cf;
+  --accent-ink: #ffffff;
+  --accent-2: #ffb040;
+}
+@media (max-width: 640px) {
+  :root { --cw: 112px; --ch: 164px; }
+}
+
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--f-body); overflow: hidden; }
+* { box-sizing: border-box; }
+
+.app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--bg);
+  color: var(--text);
+  transition: background .3s, color .3s;
+}
+
+/* ── Top bar ── */
+.bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+  padding: 12px 16px; border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.brand-mark {
+  width: 30px; height: 30px; border-radius: 9px;
+  background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; font: 800 16px/1 var(--f-display);
+}
+.brand-name { font: 700 16px/1 var(--f-display); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.ctl { display: flex; align-items: center; gap: 8px; }
+.ctl-label { font: 600 10px/1 var(--f-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.seg { display: flex; background: var(--surface); border-radius: 10px; padding: 3px; gap: 2px; }
+.seg button {
+  border: 0; background: transparent; color: var(--muted);
+  font: 600 13px/1 var(--f-body); padding: 7px 11px; border-radius: 8px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--text); }
+button:focus-visible, .slot:focus-visible, .task:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Note ── */
+.page { overflow: auto; padding: 24px 16px 12px; min-width: 0; }
+.page-inner { max-width: 720px; margin: 0 auto; }
+.note-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.crumb { font: 500 12px/1 var(--f-mono); color: var(--muted); margin-bottom: 10px; }
+.page h1 { font: 800 clamp(26px, 4vw, 36px)/1.1 var(--f-display); margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+.progress { font: 500 12px/1 var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 8px; }
+
+.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.task {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  background: var(--surface); border-radius: 14px; padding: 12px 12px 12px 14px;
+  border: 2px solid transparent;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.app.armed .task { cursor: copy; }
+.app.armed .task:hover, .task.drop { border-color: var(--accent); background: var(--surface-2); }
+.task.drop { transform: scale(1.015); }
+.task.flash { animation: flash .5s; }
+@keyframes flash { 0% { background: var(--accent); } 100% { background: var(--surface); } }
+.check {
+  width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--line);
+  background: transparent; padding: 0; cursor: pointer; display: grid; place-items: center; color: var(--accent-ink);
+}
+.task.done .check { background: var(--ok); border-color: var(--ok); color: #10241c; }
+.check svg { width: 12px; height: 12px; opacity: 0; }
+.task.done .check svg { opacity: 1; }
+.task-text { font-size: 15px; line-height: 1.4; min-width: 0; }
+.task.done .task-text { color: var(--muted); text-decoration: line-through; }
+.who { display: flex; align-items: center; }
+.who .mini {
+  width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--surface);
+  margin-left: -8px; padding: 0; overflow: hidden; cursor: pointer; background: var(--surface-2);
+  position: relative;
+}
+.who .mini:first-child { margin-left: 0; }
+.who .mini svg { width: 100%; height: 100%; display: block; }
+.who .mini:hover::after {
+  content: "×"; position: absolute; inset: 0; background: rgba(20,16,40,.75); color: #fff;
+  display: grid; place-items: center; font: 700 15px/1 var(--f-body);
+}
+.who .open-slot {
+  width: 30px; height: 30px; border-radius: 50%; border: 2px dashed var(--line);
+  display: grid; place-items: center; color: var(--muted); font: 600 14px/1 var(--f-body);
+}
+
+.raw {
+  margin: 0; padding: 16px; border-radius: 14px; background: var(--surface);
+  font: 400 13px/1.7 var(--f-mono); color: var(--text); overflow-x: auto; white-space: pre;
+}
+.raw .h { color: var(--accent); }
+.raw .at { color: var(--accent-2); }
+.foot { font: 500 11px/1.5 var(--f-mono); color: var(--muted); margin-top: 18px; }
+
+/* ── Hand zone ── */
+.hand-zone { position: relative; height: calc(var(--ch) + 88px); overflow: hidden; }
+.hand-meta {
+  position: absolute; top: 8px; left: 16px; right: 16px; z-index: 200;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; pointer-events: none;
+}
+.hand-meta > * { pointer-events: auto; }
+.count { font: 500 12px/1 var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.count b { color: var(--text); font-weight: 500; }
+.hint { font: 500 12px/1.2 var(--f-body); color: var(--muted); text-align: center; }
+.app.armed .hint { color: var(--accent); }
+@media (max-width: 640px) { .hint { display: none; } }
+.deck {
+  display: flex; align-items: center; gap: 8px; border: 0; background: var(--surface); color: var(--text);
+  font: 600 13px/1 var(--f-body); padding: 8px 12px 8px 8px; border-radius: 10px; cursor: pointer;
+}
+.deck-stack {
+  width: 18px; height: 24px; border-radius: 4px; background: var(--accent);
+  box-shadow: 3px -3px 0 var(--surface-2), 6px -6px 0 var(--line); margin-right: 6px;
+}
+.deck.shake { animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-4px) } 50% { transform: translateX(4px) } 75% { transform: translateX(-2px) } }
+
+.hand { position: absolute; inset: 0; transition: transform .35s cubic-bezier(.2,.8,.3,1); }
+.hand-zone.tucked .hand { transform: translateY(calc(var(--ch) * .62)); }
+.hand-zone.tucked:hover .hand, .hand-zone.tucked:focus-within .hand { transform: none; }
+
+.slot {
+  position: absolute; left: 50%; bottom: 34px;
+  width: var(--cw); height: var(--ch); margin-left: calc(var(--cw) / -2);
+  transform-origin: 50% 110%;
+  transform: translate(var(--x, 0px), var(--y, 0px)) rotate(var(--r, 0deg));
+  transition: transform .5s cubic-bezier(.2,.9,.3,1.25), opacity .4s;
+  z-index: var(--z, 1); cursor: grab; touch-action: none; user-select: none; border-radius: 16px;
+}
+.slot:hover, .slot:focus-visible {
+  transform: translate(var(--x), calc(var(--y) - 44px)) rotate(0deg) scale(1.07);
+  z-index: 100; transition-duration: .22s;
+}
+.slot.sel { transform: translate(var(--x), calc(var(--y) - 34px)) rotate(var(--r)); z-index: 90; }
+.slot.sel:hover { transform: translate(var(--x), calc(var(--y) - 50px)) rotate(0deg) scale(1.07); }
+.slot.lifted { opacity: .25; }
+.slot.gone {
+  transform: translate(calc(var(--x) + 140px), -520px) rotate(28deg) scale(.9);
+  opacity: 0; pointer-events: none; transition: transform .45s cubic-bezier(.5,0,.8,.4), opacity .45s;
+}
+.bob { width: 100%; height: 100%; animation: bob 3.2s ease-in-out infinite alternate; animation-delay: var(--d, 0s); }
+@keyframes bob { from { transform: translateY(-2.5px) rotate(-.6deg) } to { transform: translateY(2.5px) rotate(.6deg) } }
+.slot:hover .bob { animation-play-state: paused; }
+.card {
+  position: relative; width: 100%; height: 100%;
+  transform: perspective(700px) rotateX(var(--ty, 0deg)) rotateY(var(--tx, 0deg));
+  transition: transform .12s linear;
+}
+.x {
+  position: absolute; top: -8px; right: -8px; z-index: 5;
+  width: 24px; height: 24px; border-radius: 50%; border: 0;
+  background: var(--accent-2); color: #1b1730; font: 700 14px/1 var(--f-body); cursor: pointer;
+  opacity: 0; transform: scale(.6); transition: opacity .15s, transform .15s;
+}
+.slot:hover .x, .slot:focus-within .x { opacity: 1; transform: scale(1); }
+
+.ghost {
+  position: fixed; left: 0; top: 0; width: var(--cw); height: var(--ch);
+  pointer-events: none; z-index: 1000; transform-origin: 50% 30%;
+}
+.ghost .x { display: none; }
+
+/* ── Person card: Flat (default) ── */
+.pc {
+  height: 100%; display: flex; flex-direction: column;
+  background: var(--surface); border-radius: 16px; padding: 6px; gap: 6px;
+  border: 2px solid transparent; transition: border-color .2s;
+}
+.pc-name {
+  font: 700 17px/1 var(--f-badge); letter-spacing: .05em; text-transform: uppercase;
+  text-align: center; padding: 8px 4px 7px; border-radius: 11px;
+  background: var(--surface-2); color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: background .2s, color .2s;
+}
+.pc-mid { flex: 1; display: grid; grid-template-columns: 20px minmax(0, 1fr) 20px; gap: 5px; min-height: 0; }
+.pc-col { display: grid; gap: 5px; align-content: start; }
+.chip {
+  width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
+  background: var(--surface-2); color: var(--c, var(--muted));
+}
+.chip svg { width: 13px; height: 13px; }
+.portrait {
+  position: relative; border-radius: 10px; overflow: hidden;
+  background: hsl(var(--h) 32% 30%); min-height: 0;
+}
+.portrait svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.portrait .facets { display: none; }
+.pc-role { text-align: center; padding: 2px 2px 0; }
+.pc-role small { display: block; font: 700 9px/1 var(--f-body); letter-spacing: .16em; color: var(--muted); }
+.pc-role span {
+  display: block; font: 600 14px/1.15 var(--f-badge); margin-top: 3px; letter-spacing: .02em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pc-load { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 2px 0 4px; }
+.pip { width: 14px; height: 4px; border-radius: 2px; background: var(--line); }
+.pip.on { background: var(--accent); }
+.pc.over .pip.on { background: var(--accent-2); }
+
+.slot.sel .pc, .ghost .pc { border-color: var(--accent); }
+.slot.sel .pc-name, .ghost .pc-name { background: var(--accent); color: var(--accent-ink); }
+
+@media (max-width: 640px) {
+  .pc { padding: 4px; gap: 4px; border-radius: 13px; }
+  .pc-name { font-size: 13px; padding: 5px 2px; border-radius: 9px; }
+  .pc-mid { grid-template-columns: 15px minmax(0, 1fr) 15px; gap: 3px; }
+  .chip { width: 15px; height: 15px; border-radius: 4px; }
+  .chip svg { width: 10px; height: 10px; }
+  .pc-role small { font-size: 7px; }
+  .pc-role span { font-size: 11px; }
+  .pip { width: 9px; }
+}
+
+/* ── Person card: Low-poly sci-fi skin ── */
+.skin-poly .pc { background: #e6e3ec; border-radius: 9px; padding: 5px; }
+.skin-poly .pc-name { background: transparent; color: #1d1b26; border-radius: 4px; }
+.skin-poly .pc-mid { background: #2b3139; border-radius: 6px; padding: 6px 5px; }
+.skin-poly .chip { background: transparent; border: 1.5px solid var(--c, #5fd4c8); border-radius: 4px; }
+.skin-poly .portrait { border-radius: 3px; background: #1f242b; }
+.skin-poly .portrait .facets { display: block; }
+.skin-poly .portrait::before, .skin-poly .portrait::after {
+  content: ""; position: absolute; width: 12px; height: 12px; z-index: 2;
+  border-color: #5fd4c8; border-style: solid;
+}
+.skin-poly .portrait::before { top: 4px; left: 4px; border-width: 2px 0 0 2px; }
+.skin-poly .portrait::after { bottom: 4px; right: 4px; border-width: 0 2px 2px 0; }
+.skin-poly .pc-role { background: #2b3139; border-radius: 6px; padding: 5px 2px 6px; color: #d8dde3; }
+.skin-poly .pc-role small { color: #8c96a1; font-family: var(--f-badge); }
+.skin-poly .pc-load { padding: 3px 0 1px; }
+.skin-poly .pip { background: #c9c5d3; }
+.skin-poly .slot.sel .pc, .skin-poly .ghost .pc { border-color: #5fd4c8; }
+.skin-poly .slot.sel .pc-name, .skin-poly .ghost .pc-name { background: #5fd4c8; color: #10241c; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bob { animation: none; }
+  .slot, .hand, .task { transition-duration: .01s !important; }
+}
+</style>
+
+<div class="app skin-flat" id="app" data-palette="violet">
+  <header class="bar">
+    <div class="brand"><div class="brand-mark">O</div><span class="brand-name">Obsessed</span></div>
+    <div class="controls">
+      <div class="ctl">
+        <span class="ctl-label">Skin</span>
+        <div class="seg" role="group" aria-label="Card skin">
+          <button type="button" id="skin-flat" data-skin="flat" aria-pressed="true">Flat</button>
+          <button type="button" id="skin-poly" data-skin="poly" aria-pressed="false">Low-poly</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <span class="ctl-label">Palette</span>
+        <div class="seg" role="group" aria-label="Palette">
+          <button type="button" id="pal-violet" data-pal="violet" aria-pressed="true">Violet</button>
+          <button type="button" id="pal-navy" data-pal="navy" aria-pressed="false">Current navy</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <span class="ctl-label">Hand</span>
+        <div class="seg" role="group" aria-label="Hand position">
+          <button type="button" id="hand-up" data-hand="up" aria-pressed="true">Raised</button>
+          <button type="button" id="hand-tuck" data-hand="tuck" aria-pressed="false">Tucked</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="page-inner">
+      <div class="note-head">
+        <div>
+          <div class="crumb">notes/episode-04/shot-fixes.md</div>
+          <h1>Episode 04 Shot Fixes</h1>
+          <div class="progress" id="progress"></div>
+        </div>
+        <div class="seg" role="group" aria-label="View">
+          <button type="button" id="view-tasks" data-view="tasks" aria-pressed="true">Tasks</button>
+          <button type="button" id="view-md" data-view="md" aria-pressed="false">Markdown</button>
+        </div>
+      </div>
+      <ul class="tasks" id="tasks"></ul>
+      <pre class="raw" id="raw" hidden></pre>
+      <p class="foot">Sample crew and tasks. Assignments are saved as @mentions on the task line, so the file stays plain markdown.</p>
+    </div>
+  </main>
+
+  <section class="hand-zone" id="hand-zone" aria-label="Crew">
+    <div class="hand-meta">
+      <span class="count" id="count"></span>
+      <span class="hint" id="hint">Drag a crew card onto a task, or click a card then a task</span>
+      <button type="button" class="deck" id="deck"><span class="deck-stack"></span><span id="deck-n"></span></button>
+    </div>
+    <div class="hand" id="hand"></div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const ICONS = {
+    light: '<circle cx="12" cy="10" r="5"/><path d="M10 17h4M10.5 20h3"/>',
+    code: '<path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/>',
+    rig: '<circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="18" r="2.2"/><circle cx="12" cy="12" r="2.2"/><path d="M7.6 7.6l2.8 2.8M13.6 13.6l2.8 2.8"/>',
+    anim: '<path d="M3 17c4 0 4-10 9-10s5 10 9 10"/>',
+    fx: '<path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/>',
+    comp: '<rect x="3" y="3" width="12" height="12" rx="1"/><rect x="9" y="9" width="12" height="12" rx="1"/>',
+    film: '<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M7 5v14M17 5v14"/>',
+    cube: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>',
+    cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    cpu: '<rect x="6" y="6" width="12" height="12" rx="1"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+    ok: '<circle cx="12" cy="12" r="8"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+    busy: '<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>',
+    away: '<path d="M19 14.5A7.5 7.5 0 1 1 9.5 5a6 6 0 0 0 9.5 9.5z"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>'
+  };
+  const svg = (k, sw) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw || 2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>`;
+  const STATUS = { ok: { c: 'var(--ok)', label: 'Available' }, busy: { c: 'var(--warn)', label: 'Busy' }, away: { c: 'var(--muted)', label: 'Away' } };
+
+  // Sample crew (invented)
+  const CREW = [
+    { id: 'maya',  name: 'Maya Ortiz',   role: 'Lighting TD',    hue: 265, skin: 1, hair: 'long',  hc: 0, skills: ['light', 'code'], status: 'ok' },
+    { id: 'jonas', name: 'Jonas Rein',   role: 'Pipeline Dev',   hue: 205, skin: 0, hair: 'short', hc: 2, skills: ['code', 'cube'], status: 'busy' },
+    { id: 'noor',  name: 'Noor Halim',   role: 'Rigger',         hue: 330, skin: 2, hair: 'bun',   hc: 0, skills: ['rig', 'anim'], status: 'ok' },
+    { id: 'unit7', name: 'Unit-7',       role: 'Render Bot',     hue: 185, robot: true,            skills: ['cpu', 'film'], status: 'ok' },
+    { id: 'ika',   name: 'Ika Putri',    role: 'Animator',       hue: 20,  skin: 2, hair: 'bob',   hc: 0, skills: ['anim', 'rig'], status: 'ok' },
+    { id: 'teo',   name: 'Teo Marquez',  role: 'FX Artist',      hue: 160, skin: 1, hair: 'buzz',  hc: 1, skills: ['fx', 'cube'], status: 'away' },
+    { id: 'bram',  name: 'Bram Okafor',  role: 'Producer',       hue: 45,  skin: 3, hair: 'buzz',  hc: 0, skills: ['cal', 'film'], status: 'busy' },
+    { id: 'sunhee',name: 'Sun-hee Park', role: 'Compositor',     hue: 295, skin: 0, hair: 'bob',   hc: 0, skills: ['comp', 'light'], status: 'ok' },
+    { id: 'lia',   name: 'Lia Santos',   role: 'Modeler',        hue: 120, skin: 4, hair: 'long',  hc: 3, skills: ['cube', 'fx'], status: 'ok' }
+  ];
+  const byId = (id) => CREW.find(c => c.id === id);
+
+  const TASKS = [
+    { t: 'Relight sh010 interior, key light too hot', who: ['maya'], done: false },
+    { t: 'Fix foot sliding on sh020 walk cycle', who: ['ika'], done: false },
+    { t: 'Rebuild water sim cache for sh030', who: [], done: false },
+    { t: 'Update USD export for set dressing', who: ['jonas'], done: true },
+    { t: 'Elbow twist fix on hero rig', who: ['noor'], done: false },
+    { t: 'Comp pass for sh040 with new mattes', who: [], done: false },
+    { t: 'Queue overnight renders for sh010 to sh040', who: ['unit7', 'jonas'], done: false },
+    { t: 'Review cut with director', who: [], done: false }
+  ];
+  const MAX_LOAD = 4, HAND_LIMIT = 8;
+
+  // ── Flat avatar ──
+  const SKIN = ['#f2cba8', '#dba47c', '#b07650', '#7a4a2e', '#e9b892'];
+  const HAIR = ['#2a1d18', '#1c1c24', '#6b4226', '#c98a3a'];
+  function rng(seed) { let s = 0; for (const ch of seed) s = (s * 31 + ch.charCodeAt(0)) >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+  function avatar(p, withFacets) {
+    const shirt = `hsl(${p.hue} 45% 52%)`, shirtDk = `hsl(${p.hue} 40% 42%)`;
+    let s = '';
+    if (p.robot) {
+      s += `<path d="M14 100C14 78 30 70 50 70S86 78 86 100Z" fill="#9aa7b5"/>`;
+      s += `<rect x="44" y="58" width="12" height="14" fill="#7c8896"/>`;
+      s += `<path d="M50 20V12" stroke="#c9d3de" stroke-width="3" stroke-linecap="round"/><circle cx="50" cy="11" r="3.5" fill="hsl(${p.hue} 70% 60%)"/>`;
+      s += `<rect x="29" y="20" width="42" height="40" rx="14" fill="#dfe6ee"/>`;
+      s += `<rect x="34" y="31" width="32" height="15" rx="7.5" fill="#1d2a3a"/>`;
+      s += `<rect x="40" y="35.5" width="6" height="6" rx="2" fill="hsl(${p.hue} 80% 62%)"/><rect x="54" y="35.5" width="6" height="6" rx="2" fill="hsl(${p.hue} 80% 62%)"/>`;
+      s += `<rect x="42" y="78" width="16" height="8" rx="3" fill="#7c8896"/>`;
+    } else {
+      const sk = SKIN[p.skin], hr = HAIR[p.hc];
+      if (p.hair === 'long') s += `<path d="M30 46C28 22 42 16 51 17C64 18 72 27 70 48L72 74H59L61 48H39L41 74H28Z" fill="${hr}"/>`;
+      s += `<path d="M14 100C14 77 30 69 50 69S86 77 86 100Z" fill="${shirt}"/>`;
+      s += `<path d="M40 69L50 82L60 69Z" fill="${shirtDk}"/>`;
+      s += `<rect x="43" y="56" width="14" height="16" rx="3" fill="${sk}"/>`;
+      s += `<rect x="43" y="60" width="14" height="5" fill="#000" opacity=".12"/>`;
+      s += `<ellipse cx="50" cy="42" rx="16.5" ry="19.5" fill="${sk}"/>`;
+      s += `<circle cx="33.5" cy="44" r="3.5" fill="${sk}"/><circle cx="66.5" cy="44" r="3.5" fill="${sk}"/>`;
+      if (p.hair === 'short') s += `<path d="M33 40C31 22 44 17 52 18C65 19 70 29 67 40C63 32 57 29 49 30C41 30 36 34 33 40Z" fill="${hr}"/>`;
+      if (p.hair === 'buzz')  s += `<path d="M34 36C35 24 43 21 50 21S65 24 66 36C61 30 56 28 50 28S39 30 34 36Z" fill="${hr}"/>`;
+      if (p.hair === 'bob')   s += `<path d="M32 52C29 26 41 19 50 19S71 26 68 52L64 52C65 40 60 30 50 29C42 30 37 34 36 52Z" fill="${hr}"/>`;
+      if (p.hair === 'bun')   s += `<circle cx="50" cy="16" r="8" fill="${hr}"/><path d="M33 40C32 25 42 20 50 20S68 25 67 40C62 31 56 28 50 28S38 31 33 40Z" fill="${hr}"/>`;
+      if (p.hair === 'long')  s += `<path d="M33 42C32 25 42 19 51 19C62 20 69 28 67 42C60 37 55 30 52 27C47 33 40 38 33 42Z" fill="${hr}"/>`;
+      s += `<circle cx="43.5" cy="44" r="2" fill="#221a20"/><circle cx="56.5" cy="44" r="2" fill="#221a20"/>`;
+      s += `<path d="M45.5 51.5Q50 54.5 54.5 51.5" stroke="#5a3a33" stroke-width="1.8" fill="none" stroke-linecap="round"/>`;
+    }
+    let f = '';
+    if (withFacets) {
+      const r = rng(p.id);
+      const grid = [];
+      for (let y = 0; y <= 4; y++) for (let x = 0; x <= 4; x++) grid.push([x * 25 + (x % 4 ? (r() - .5) * 14 : 0), y * 25 + (y % 4 ? (r() - .5) * 14 : 0)]);
+      for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+        const a = grid[y * 5 + x], b = grid[y * 5 + x + 1], c = grid[(y + 1) * 5 + x], d = grid[(y + 1) * 5 + x + 1];
+        f += `<polygon points="${a} ${b} ${d}" fill="#fff" opacity="${(r() * .12).toFixed(3)}"/><polygon points="${a} ${d} ${c}" fill="#000" opacity="${(r() * .14).toFixed(3)}"/>`;
+      }
+      f = `<g class="facets">${f}</g>`;
+    }
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">${s}${f}</svg>`;
+  }
+  const bg = (p) => p.robot ? `hsl(${p.hue} 30% 26%)` : '';
+
+  function load(id) { return TASKS.filter(t => !t.done && t.who.includes(id)).length; }
+
+  function cardHTML(p) {
+    const st = STATUS[p.status];
+    return `
+      <button type="button" class="x" aria-label="Send ${p.name} back to the roster">×</button>
+      <div class="pc" style="--h:${p.hue}">
+        <div class="pc-name">${p.name}</div>
+        <div class="pc-mid">
+          <div class="pc-col">${p.skills.map(k => `<span class="chip" style="--c:hsl(${p.hue} 65% 70%)">${svg(k)}</span>`).join('')}</div>
+          <div class="portrait">${avatar(p, true)}</div>
+          <div class="pc-col"><span class="chip" style="--c:${st.c}" title="${st.label}">${svg(p.status)}</span></div>
+        </div>
+        <div class="pc-role"><small>ROLE</small><span>${p.role}</span></div>
+        <div class="pc-load"></div>
+      </div>`;
+  }
+
+  const app = document.getElementById('app');
+  const zone = document.getElementById('hand-zone');
+  const handEl = document.getElementById('hand');
+  const deckBtn = document.getElementById('deck');
+  const tasksEl = document.getElementById('tasks');
+  const rawEl = document.getElementById('raw');
+  const hintEl = document.getElementById('hint');
+  let hand = CREW.slice(0, 7).map(c => c.id);
+  let deck = CREW.slice(7).map(c => c.id);
+  let selected = null;
+  const els = new Map();
+
+  function paintLoad(id) {
+    const s = els.get(id); if (!s) return;
+    const n = load(id);
+    const pc = s.querySelector('.pc');
+    pc.classList.toggle('over', n >= MAX_LOAD);
+    s.querySelector('.pc-load').innerHTML = Array.from({ length: MAX_LOAD }, (_, i) => `<span class="pip${i < n ? ' on' : ''}"></span>`).join('');
+    s.setAttribute('aria-label', `${byId(id).name}, ${byId(id).role}, ${n} open task${n === 1 ? '' : 's'}`);
+  }
+
+  // ── Drag / click ──
+  let drag = null;
+  function startPointer(e, id, slot) {
+    if (e.button !== 0 || e.target.closest('.x')) return;
+    drag = { id, slot, x0: e.clientX, y0: e.clientY, lx: e.clientX, active: false, ghost: null, target: null };
+    slot.setPointerCapture(e.pointerId);
+  }
+  function movePointer(e) {
+    if (!drag) return;
+    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if (!drag.active && Math.hypot(dx, dy) > 6) {
+      drag.active = true;
+      const g = document.createElement('div');
+      g.className = 'ghost';
+      g.innerHTML = `<div class="card">${drag.slot.querySelector('.card').innerHTML}</div>`;
+      app.appendChild(g);
+      drag.ghost = g;
+      drag.slot.classList.add('lifted');
+      setArmed(drag.id);
+    }
+    if (drag.active) {
+      const vx = e.clientX - drag.lx; drag.lx = e.clientX;
+      const g = drag.ghost, w = g.offsetWidth;
+      g.style.transform = `translate(${e.clientX - w / 2}px, ${e.clientY - 40}px) rotate(${Math.max(-14, Math.min(14, vx * 1.2))}deg) scale(.9)`;
+      const t = document.elementFromPoint(e.clientX, e.clientY);
+      const task = t && t.closest ? t.closest('.task') : null;
+      if (task !== drag.target) {
+        if (drag.target) drag.target.classList.remove('drop');
+        drag.target = task;
+        if (task) task.classList.add('drop');
+      }
+    }
+  }
+  function endPointer() {
+    if (!drag) return;
+    const d = drag; drag = null;
+    if (d.active) {
+      d.ghost.remove();
+      d.slot.classList.remove('lifted');
+      if (d.target) { d.target.classList.remove('drop'); assign(d.id, +d.target.dataset.i); }
+      setArmed(selected);
+    } else {
+      toggleSelect(d.id);
+    }
+  }
+  window.addEventListener('pointermove', movePointer);
+  window.addEventListener('pointerup', endPointer);
+  window.addEventListener('pointercancel', endPointer);
+
+  function setArmed(id) {
+    app.classList.toggle('armed', !!id);
+    hintEl.textContent = id ? `Assign ${byId(id).name} to a task` : 'Drag a crew card onto a task, or click a card then a task';
+  }
+  function toggleSelect(id) {
+    selected = selected === id ? null : id;
+    els.forEach((s, k) => s.classList.toggle('sel', k === selected));
+    setArmed(selected);
+  }
+
+  function makeSlot(id) {
+    const p = byId(id);
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.tabIndex = 0;
+    slot.setAttribute('role', 'button');
+    slot.innerHTML = `<div class="bob"><div class="card">${cardHTML(p)}</div></div>`;
+    slot.style.setProperty('--d', (-Math.random() * 3).toFixed(2) + 's');
+    if (p.robot) slot.querySelector('.portrait').style.background = bg(p);
+    const inner = slot.querySelector('.card');
+    slot.addEventListener('mousemove', (e) => {
+      if (drag && drag.active) return;
+      const b = inner.getBoundingClientRect();
+      inner.style.setProperty('--tx', (((e.clientX - b.left) / b.width - .5) * 18).toFixed(1) + 'deg');
+      inner.style.setProperty('--ty', (-((e.clientY - b.top) / b.height - .5) * 18).toFixed(1) + 'deg');
+    });
+    slot.addEventListener('mouseleave', () => { inner.style.setProperty('--tx', '0deg'); inner.style.setProperty('--ty', '0deg'); });
+    slot.addEventListener('pointerdown', (e) => startPointer(e, id, slot));
+    slot.querySelector('.x').addEventListener('click', (e) => { e.stopPropagation(); discard(id); });
+    slot.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSelect(id); }
+      if (e.key === 'Delete' || e.key === 'Backspace') discard(id);
+    });
+    slot.style.setProperty('--x', (handEl.clientWidth / 2) + 'px');
+    slot.style.setProperty('--y', '320px');
+    slot.style.setProperty('--r', '24deg');
+    handEl.appendChild(slot);
+    els.set(id, slot);
+    paintLoad(id);
+    return slot;
+  }
+
+  function layout(stagger) {
+    const W = handEl.clientWidth;
+    const cw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cw')) || 152;
+    const n = hand.length, mid = (n - 1) / 2;
+    const spacing = n > 1 ? Math.min(cw * 0.8, (W - cw - 24) / (n - 1)) : 0;
+    const spread = Math.min(5, 26 / Math.max(n, 1));
+    hand.forEach((id, i) => {
+      const s = els.get(id), off = i - mid;
+      s.style.transitionDelay = stagger ? (i * 70) + 'ms' : '0ms';
+      s.style.setProperty('--x', (off * spacing).toFixed(1) + 'px');
+      s.style.setProperty('--y', (off * off * 2.5).toFixed(1) + 'px');
+      s.style.setProperty('--r', (off * spread).toFixed(2) + 'deg');
+      s.style.setProperty('--z', i + 1);
+    });
+    if (stagger) setTimeout(() => hand.forEach(id => { const s = els.get(id); if (s) s.style.transitionDelay = '0ms'; }), n * 70 + 600);
+    document.getElementById('count').innerHTML = `Crew <b>${n}/${HAND_LIMIT}</b>`;
+    document.getElementById('deck-n').textContent = `Roster ${deck.length}`;
+  }
+
+  function discard(id) {
+    const s = els.get(id); if (!s) return;
+    s.classList.add('gone');
+    hand = hand.filter(h => h !== id);
+    deck.push(id);
+    els.delete(id);
+    if (selected === id) { selected = null; setArmed(null); }
+    setTimeout(() => s.remove(), 480);
+    layout(false);
+  }
+  function draw() {
+    if (hand.length >= HAND_LIMIT || !deck.length) {
+      deckBtn.classList.remove('shake'); void deckBtn.offsetWidth; deckBtn.classList.add('shake'); return;
+    }
+    const id = deck.shift();
+    hand.push(id);
+    makeSlot(id);
+    requestAnimationFrame(() => requestAnimationFrame(() => layout(false)));
+  }
+  deckBtn.addEventListener('click', draw);
+
+  // ── Tasks ──
+  function assign(id, i) {
+    const t = TASKS[i];
+    if (!t.who.includes(id) && t.who.length < 3) t.who.push(id);
+    renderTasks();
+    const row = tasksEl.children[i];
+    if (row) { row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash'); }
+  }
+  function renderTasks() {
+    tasksEl.innerHTML = TASKS.map((t, i) => {
+      const minis = t.who.map(id => {
+        const p = byId(id);
+        return `<button type="button" class="mini" data-un="${id}" style="background:${p.robot ? bg(p) : `hsl(${p.hue} 32% 30%)`}" aria-label="Unassign ${p.name}" title="${p.name}">${avatar(p, false)}</button>`;
+      }).join('');
+      return `<li class="task${t.done ? ' done' : ''}" data-i="${i}" tabindex="0">
+        <button type="button" class="check" aria-label="${t.done ? 'Mark not done' : 'Mark done'}">${svg('check', 3)}</button>
+        <span class="task-text">${t.t}</span>
+        <span class="who">${minis || '<span class="open-slot" title="Unassigned">+</span>'}</span>
+      </li>`;
+    }).join('');
+    const done = TASKS.filter(t => t.done).length;
+    const open = TASKS.filter(t => !t.done && !t.who.length).length;
+    document.getElementById('progress').textContent = `${done}/${TASKS.length} done · ${open} unassigned`;
+    rawEl.innerHTML = `<span class="h"># Episode 04 Shot Fixes</span>\n\n` + TASKS.map(t =>
+      `- [${t.done ? 'x' : ' '}] ${t.t}${t.who.map(w => ` <span class="at">@${w}</span>`).join('')}`).join('\n');
+    els.forEach((_, id) => paintLoad(id));
+  }
+  tasksEl.addEventListener('click', (e) => {
+    const row = e.target.closest('.task'); if (!row) return;
+    const i = +row.dataset.i;
+    const un = e.target.closest('[data-un]');
+    if (un) { TASKS[i].who = TASKS[i].who.filter(w => w !== un.dataset.un); renderTasks(); return; }
+    if (e.target.closest('.check')) { TASKS[i].done = !TASKS[i].done; renderTasks(); return; }
+    if (selected) assign(selected, i);
+  });
+  tasksEl.addEventListener('keydown', (e) => {
+    const row = e.target.closest('.task');
+    if (row && e.target === row && e.key === 'Enter' && selected) assign(selected, +row.dataset.i);
+  });
+
+  // ── Toggles ──
+  function wire(attr, apply) {
+    document.querySelectorAll(`[data-${attr}]`).forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll(`[data-${attr}]`).forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+      apply(btn.dataset[attr]);
+    }));
+  }
+  wire('skin', v => { app.classList.toggle('skin-flat', v === 'flat'); app.classList.toggle('skin-poly', v === 'poly'); });
+  wire('pal', v => { app.dataset.palette = v; });
+  wire('hand', v => { zone.classList.toggle('tucked', v === 'tuck'); });
+  wire('view', v => { tasksEl.hidden = v !== 'tasks'; rawEl.hidden = v !== 'md'; });
+
+  hand.forEach(makeSlot);
+  renderTasks();
+  requestAnimationFrame(() => requestAnimationFrame(() => layout(true)));
+  let rt;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => layout(false), 80); });
+})();
+</script>
