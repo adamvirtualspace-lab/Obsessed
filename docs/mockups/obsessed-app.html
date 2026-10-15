@@ -422,10 +422,10 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
   const avatarBg = (p) => p.robot ? `hsl(${p.hue} 30% 26%)` : `hsl(${p.hue} 32% 30%)`;
 
   // ── Status formats, as written in each file's ::statusformat:: ──
-  const DEFAULT_FMT = [['-', '⚪', 'cannot start'], [' ', '🔳', 'ready to start'], ['?', '❓', 'ready to check'], ['x', '✅', 'Finished']];
-  const COMP_FMT = [['-', '⚪', 'cannot start'], [' ', '🔳', 'ready to start'], ['/', '🎨', 'in progress'], ['?', '❓', 'ready to check'], ['x', '✅', 'Approved'], ['r', '🔁', 'retake']];
+  const DEFAULT_FMT = [['-', '⚪', 'cannot start', 'blocked'], [' ', '🔳', 'ready to start'], ['?', '❓', 'ready to check'], ['x', '✅', 'Finished']];
+  const COMP_FMT = [['-', '⚪', 'cannot start', 'blocked'], [' ', '🔳', 'ready to start'], ['/', '🎨', 'in progress'], ['?', '❓', 'ready to check'], ['x', '✅', 'Approved'], ['r', '🔁', 'retake']];
   const NOTES_FMT = [[' ', '📝', 'open note'], ['x', '👍', 'addressed']];
-  const DELIV_FMT = [['-', '⚪', 'cannot start'], [' ', '🔳', 'ready to start'], ['?', '❓', 'ready to check'], ['x', '📦', 'Delivered']];
+  const DELIV_FMT = [['-', '⚪', 'cannot start', 'blocked'], [' ', '🔳', 'ready to start'], ['?', '❓', 'ready to check'], ['x', '📦', 'Delivered']];
 
   // ── The flow's files, block by block (mirrors sample-vault/) ──
   const H1 = (text) => ({ t: 'h1', text });
@@ -491,10 +491,10 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
   ];
 
   // Files outside the flow: shown in the tree, read-only here
-  const PARSER_TESTS = ['default-format.md', 'format-problems.md', 'format-spacing.md', 'ids-people-wires.md', 'last-format-wins.md', 'not-tasks.md', 'round-trip.md'];
+  const PARSER_TESTS = ['default-format.md', 'format-problems.md', 'format-spacing.md', 'ids-people-wires.md', 'last-format-wins.md', 'not-tasks.md', 'roles.md', 'round-trip.md'];
   const STRIPS = {
     '_parser-tests/default-format.md': '🔳✅✅⚪❓', '_parser-tests/format-problems.md': '🌱🌿🔥✅⚠', '_parser-tests/format-spacing.md': '⚪🔳❓✅',
-    '_parser-tests/ids-people-wires.md': '✅⚪🔳🔳', '_parser-tests/last-format-wins.md': '🟦🏁', '_parser-tests/not-tasks.md': '🔳🔳🔳🔳', '_parser-tests/round-trip.md': '🔳🔳🔳🔳'
+    '_parser-tests/ids-people-wires.md': '✅⚪🔳🔳', '_parser-tests/last-format-wins.md': '🟦🏁', '_parser-tests/not-tasks.md': '🔳🔳🔳🔳', '_parser-tests/round-trip.md': '🔳🔳🔳🔳', '_parser-tests/roles.md': '⏳🟡❓👍❌'
   };
   const RAW_TEXT = {
     '_parser-tests/format-problems.md': [
@@ -502,7 +502,7 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
       '> Expected:',
       '> - Entries are separated by new lines instead of commas. That\'s allowed.',
       '> - The entry with empty brackets is broken. Skip it and warn; the other 3 entries still work.',
-      '> - The format has no `[x]` entry, so the app warns and `[x]` falls back to the default ✅ Finished.',
+      '> - No status is done (no `[x]` entry and no `= done`), so the app warns and adds `[x]` = ✅ Finished as done.',
       '> - "Mystery" uses a character the format doesn\'t have, so it shows ⚠ and its line is left alone.',
       '> - 5 tasks: 🌱 idea, 🌿 growing, 🔥 urgent, ✅ Finished, ⚠ unknown.', '',
       '::statusformat::', '[ ] = 🌱 = idea', '[~] = 🌿 = growing', '[] = 🙃 = empty brackets are not allowed', '[!] = 🔥 = urgent', '::statusformat::', '',
@@ -515,13 +515,25 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
       '::statusformat:: [ ] = 🔳 = ready to start, [x] = ✅ = Finished ::statusformat::', '',
       '- [ ] Write the brief', '',
       '::statusformat:: [ ] = 🟦 = To do, [x] = 🏁 = Done ::statusformat::', '',
-      '- [x] Review the brief']
+      '- [x] Review the brief'],
+    '_parser-tests/roles.md': [
+      '# Test: roles', '',
+      '> Expected:',
+      '> - `[a]` is done, `[o]` is open and `[w]` is blocked, because their entries say so.',
+      '> - `[x]` is just "rejected", an in-between status, because `[a]` already claims done.',
+      '> - `review` isn\'t a role, so the app warns and `[?]` works without one.',
+      '> - "Check the pier" needs "Model the pier", which is done, so it should be open. It\'s `[w]`, so it gets a warning badge. Opening the file doesn\'t change it.',
+      '> - 5 tasks: ⏳ waiting, 🟡 to do, ❓ in review, 👍 Approved, ❌ rejected.', '',
+      '::statusformat:: [w] = ⏳ = waiting = blocked, [o] = 🟡 = to do = open, [?] = ❓ = in review = review, [a] = 👍 = Approved = done, [x] = ❌ = rejected ::statusformat::', '',
+      '- [w] Check the pier ^check', '  - needs:: [[#^pier]]', '- [o] Paint the boat', '- [?] Rig the sail', '- [a] Model the pier ^pier', '- [x] First boat design']
   };
   const STATIC_WARN = [
-    { path: '_parser-tests/format-problems.md', line: 10, msg: 'The status format has no <code>[x]</code>, so <code>[x]</code> uses the default ✅ Finished.' },
+    { path: '_parser-tests/format-problems.md', line: 10, msg: 'No status is done, so <code>[x]</code> = ✅ Finished is added as done.' },
     { path: '_parser-tests/format-problems.md', line: 13, msg: 'Entry <code>[]</code> has no status character. Skipped.' },
     { path: '_parser-tests/format-problems.md', line: 21, msg: '<code>[k]</code> isn’t in this file’s status format. Line left alone.' },
-    { path: '_parser-tests/last-format-wins.md', line: 7, msg: 'Ignored: the status format on line 11 comes later, so it wins.' }
+    { path: '_parser-tests/last-format-wins.md', line: 7, msg: 'Ignored: the status format on line 11 comes later, so it wins.' },
+    { path: '_parser-tests/roles.md', line: 10, msg: '<code>review</code> isn’t a role, so <code>[?]</code> works without one.' },
+    { path: '_parser-tests/roles.md', line: 12, msg: '<b>Check the pier</b> is ⏳ waiting, but its needs are met.' }
   ];
   const ALL_FILES = ['README.md', ...PARSER_TESTS.map(n => '_parser-tests/' + n), ...Object.keys(INIT)];
 
@@ -546,14 +558,19 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
   const entry = (path, ch) => fmtOf(path).find(e => e[0] === (ch === 'X' ? 'x' : ch));
   const sym = (path, ch) => (entry(path, ch) || [ch, '⚠'])[1];
   const label = (path, ch) => (entry(path, ch) || [ch, '', 'unknown status'])[2];
-  const isDone = (ch) => ch === 'x' || ch === 'X';
+  // Roles (SYNTAX.md section 2): an entry can claim open, done or blocked. If none does, [ ] is open and [x] is done.
+  const ROLE_DEFAULT = { open: ' ', done: 'x' };
+  function roleCh(path, role) { const e = fmtOf(path).find(e => e[3] === role); return e ? e[0] : (ROLE_DEFAULT[role] || null); }
+  const roleOf = (path, ch) => ['open', 'done', 'blocked'].find(r => roleCh(path, r) === (ch === 'X' ? 'x' : ch)) || '';
+  const isDoneIn = (path, ch) => roleOf(path, ch) === 'done';
+  const pathOf = (key) => key.slice(0, key.indexOf('#'));
   function allTasks() { const out = []; Object.keys(FILES).forEach(p => FILES[p].forEach(b => { if (b.t === 'task') out.push({ path: p, b }); })); return out; }
   function task(key) { const i = key.indexOf('#'); const p = key.slice(0, i), id = key.slice(i + 1); return FILES[p] && FILES[p].find(b => b.t === 'task' && (b.id === id || b._k === id)); }
-  const needsMet = (b) => b.needs.every(r => { const t = task(refKey(r)); return t && isDone(t.s); });
-  const hasBlocked = (path) => fmtOf(path).some(e => e[0] === '-');
+  const needsMet = (b) => b.needs.every(r => { const k = refKey(r), t = task(k); return t && isDoneIn(pathOf(k), t.s); });
   function disagrees(path, b) {
-    if (!b.needs.length || !hasBlocked(path)) return false;
-    return needsMet(b) ? b.s === '-' : b.s !== '-';
+    const bl = roleCh(path, 'blocked');
+    if (!b.needs.length || !bl) return false;
+    return needsMet(b) ? b.s === bl : b.s !== bl;
   }
 
   // ── Writing a file back out (what would be saved to disk) ──
@@ -566,13 +583,13 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
       else if (b.t === 'h2') lines.push('## ' + b.text);
       else if (b.t === 'p') lines.push(b.text);
       else if (b.t === 'format') {
-        const parts = b.entries.map(e => `[${e[0]}] = ${e[1]} = ${e[2]}`);
+        const parts = b.entries.map(e => `[${e[0]}] = ${e[1]} = ${e[2]}` + (e[3] ? ` = ${e[3]}` : ''));
         if (b.multi) { lines.push('::statusformat::'); parts.forEach((s, i) => lines.push(s + (i < parts.length - 1 ? ',' : ''))); lines.push('::statusformat::'); }
         else lines.push('::statusformat:: ' + parts.join(', ') + ' ::statusformat::');
       } else if (b.t === 'task') {
         lines.push(`- [${b.s}] ${b.text}` + b.who.map(w => ' @' + w).join('') + (b.id ? ' ^' + b.id : ''));
-        if (b.needs.length) lines.push('  needs:: ' + b.needs.map(refText).join(', '));
-        if (b.sync.length) lines.push('  sync:: ' + b.sync.map(refText).join(', '));
+        if (b.needs.length) lines.push('  - needs:: ' + b.needs.map(refText).join(', '));
+        if (b.sync.length) lines.push('  - sync:: ' + b.sync.map(refText).join(', '));
       }
       prev = b;
     });
@@ -610,14 +627,15 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
     queue.push({ key, before, after: ch });
   }
   function propagate(ev) {
-    const was = isDone(ev.before), now = isDone(ev.after);
+    const sp = pathOf(ev.key), was = isDoneIn(sp, ev.before), now = isDoneIn(sp, ev.after);
     allTasks().forEach(({ path, b }) => {
       const k = tkey(path, b);
       if (b.needs.some(r => refKey(r) === ev.key)) {
-        if (now && !was && b.s === '-' && needsMet(b) && hasBlocked(path)) setStatus(k, ' ', 'needs met');
-        if (was && !now && !needsMet(b) && b.s === ' ' && hasBlocked(path)) setStatus(k, '-', 'need undone');
+        const bl = roleCh(path, 'blocked'), op = roleCh(path, 'open');
+        if (now && !was && bl && b.s === bl && needsMet(b)) setStatus(k, op, 'needs met');
+        if (was && !now && bl && b.s === op && !needsMet(b)) setStatus(k, bl, 'need undone');
       }
-      if (now && !was && b.sync.some(r => refKey(r) === ev.key) && !isDone(b.s)) setStatus(k, 'x', 'sync');
+      if (now && !was && b.sync.some(r => refKey(r) === ev.key) && !isDoneIn(path, b.s)) setStatus(k, roleCh(path, 'done'), 'sync');
     });
     OPS.filter(o => o.watch && o.watch.task === ev.key && o.watch.to === ev.after).forEach(run);
   }
@@ -693,11 +711,11 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
   let outRef = new Set(), changed = new Set();
   function chipHTML(kind, ref) {
     const t = task(refKey(ref)), [p, id] = ref.split('#');
-    return `<span class="chip ${kind}${t && isDone(t.s) ? ' met' : ''}">${kind} <b>${t ? sym(p + '.md', t.s) : '⚠'}</b> ${p} ^${id}</span>`;
+    return `<span class="chip ${kind}${t && isDoneIn(p + '.md', t.s) ? ' met' : ''}">${kind} <b>${t ? sym(p + '.md', t.s) : '⚠'}</b> ${p} ^${id}</span>`;
   }
   function rowHTML(path, b, ctx) {
-    const key = tkey(path, b), e = entry(path, b.s), done = isDone(b.s);
-    const blocked = b.needs.length > 0 && !needsMet(b) && b.s === '-';
+    const key = tkey(path, b), e = entry(path, b.s), done = isDoneIn(path, b.s);
+    const blocked = b.needs.length > 0 && !needsMet(b) && b.s === roleCh(path, 'blocked');
     const warn = disagrees(path, b);
     const who = b.who.length ? b.who.map(id => { const p = person(id); return `<span class="mini" style="background:${avatarBg(p)}" title="${p.name}">${avatar(p)}</span>`; }).join('') : (ctx === 'node' ? '' : '<span class="open-slot" title="Unassigned">+</span>');
     const chips = [...b.needs.map(r => chipHTML('needs', r)), ...b.sync.map(r => chipHTML('sync', r))].join('');
@@ -749,7 +767,7 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
     if (/^#{1,6} /.test(line)) return `<span class="k-h">${esc(line)}</span>`;
     let h = esc(line);
     h = h.replace(/^(\s*[-*+] )\[(.)\]/, (m, a, c) => `${a}<span class="k-br">[${c}]</span>`);
-    h = h.replace(/^(\s+)(needs|sync)::/, '$1<span class="k-field">$2::</span>');
+    h = h.replace(/^(\s+- )(needs|sync)::/, '$1<span class="k-field">$2::</span>');
     h = h.replace(/\[\[([^\]]+)\]\]/g, '<span class="k-link">[[$1]]</span>');
     h = h.replace(/(^|\s)@([\w-]+)/g, '$1<span class="k-at">@$2</span>');
     h = h.replace(/ \^([\w-]+)$/, ' <span class="k-id">^$1</span>');
@@ -761,7 +779,7 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
     const path = current, flowFile = !!FILES[path];
     const parts = path.split('/');
     document.getElementById('crumb').innerHTML = parts.map((s, i) => i === parts.length - 1 ? `<b>${esc(s)}</b>` : esc(s)).join(' / ');
-    document.getElementById('fchips').innerHTML = flowFile ? fmtOf(path).map(e => `<span class="fchip" title="${esc(e[2])}"><i>${e[1]}</i>${esc(e[2])} <code>[${e[0]}]</code></span>`).join('') : '';
+    document.getElementById('fchips').innerHTML = flowFile ? fmtOf(path).map(e => `<span class="fchip" title="${esc(e[2])}"><i>${e[1]}</i>${esc(e[2])} <code>[${e[0]}]${roleOf(path, e[0]) ? ' ' + roleOf(path, e[0]) : ''}</code></span>`).join('') : '';
     let lines = null;
     const chgLines = new Set();
     if (flowFile) {
@@ -801,7 +819,7 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
   function fileNodeHTML(path) {
     const blocks = FILES[path], h1 = blocks.find(b => b.t === 'h1');
     const tasks = blocks.filter(b => b.t === 'task');
-    const open = tasks.filter(b => !isDone(b.s)).length;
+    const open = tasks.filter(b => !isDoneIn(path, b.s)).length;
     const warnN = tasks.filter(b => disagrees(path, b) || !entry(path, b.s)).length;
     const [fi, fo] = fan(path);
     let pill = '';
@@ -860,8 +878,8 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
     const L = [];
     allTasks().forEach(({ path, b }) => {
       const to = tkey(path, b);
-      b.needs.forEach(r => { const t = task(refKey(r)); L.push({ from: `task:${refKey(r)}:out`, to: `task:${to}:in`, kind: 'needs', live: t && isDone(t.s), src: refKey(r) }); });
-      b.sync.forEach(r => { const t = task(refKey(r)); L.push({ from: `task:${refKey(r)}:out`, to: `task:${to}:in`, kind: 'sync', live: t && isDone(t.s), src: refKey(r) }); });
+      b.needs.forEach(r => { const t = task(refKey(r)); L.push({ from: `task:${refKey(r)}:out`, to: `task:${to}:in`, kind: 'needs', live: t && isDoneIn(pathOf(refKey(r)), t.s), src: refKey(r) }); });
+      b.sync.forEach(r => { const t = task(refKey(r)); L.push({ from: `task:${refKey(r)}:out`, to: `task:${to}:in`, kind: 'sync', live: t && isDoneIn(pathOf(refKey(r)), t.s), src: refKey(r) }); });
     });
     OPS.forEach(op => op.rows.forEach(r => {
       if (r.inData) L.push({ from: `task:${r.inData}:out`, to: `op:${op.id}:in:${r.label}`, kind: 'data' });
@@ -943,18 +961,18 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
   const picker = document.getElementById('picker');
   function nextStatus(path, ch) {
     const f = fmtOf(path), i = f.findIndex(e => e[0] === (ch === 'X' ? 'x' : ch));
-    if (i < 0 || isDone(ch)) return null;
-    for (let j = i + 1; j < f.length; j++) { if (f[j][0] === '-') continue; return f[j][0]; }
+    if (i < 0 || isDoneIn(path, ch)) return null;
+    for (let j = i + 1; j < f.length; j++) { if (f[j][0] === roleCh(path, 'blocked')) continue; return f[j][0]; }
     return null;
   }
   function openPicker(key, rect) {
     const path = key.slice(0, key.indexOf('#')), b = task(key), f = fmtOf(path);
-    const xi = f.findIndex(e => e[0] === 'x');
+    const xi = f.findIndex(e => e[0] === roleCh(path, 'done'));
     let h = `<div class="pk-h">Set status</div><div class="pk-t">${md(b.text)}</div>`;
     f.forEach((e, i) => {
       if (i === xi + 1) h += '<div class="pk-sep">Right-click only</div>';
-      const auto = e[0] === '-' && b.needs.length > 0;
-      h += `<button type="button" class="pk-i${e[0] === b.s ? ' cur' : ''}" data-ch="${e[0]}"${auto ? ' disabled' : ''}><i>${e[1]}</i><span>${esc(e[2])}${auto ? '<small>Set by its needs:: wires</small>' : ''}</span><code>[${e[0]}]</code></button>`;
+      const auto = e[0] === roleCh(path, 'blocked') && b.needs.length > 0;
+      h += `<button type="button" class="pk-i${e[0] === b.s ? ' cur' : ''}" data-ch="${e[0]}"${auto ? ' disabled' : ''}><i>${e[1]}</i><span>${esc(e[2])}${auto ? '<small>Set by its needs:: wires</small>' : ''}</span><code>[${e[0]}]${roleOf(path, e[0]) ? ' ' + roleOf(path, e[0]) : ''}</code></button>`;
     });
     picker.innerHTML = h; picker.dataset.key = key; picker.hidden = false;
     const pw = 260, ph = picker.offsetHeight;
@@ -977,7 +995,7 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
     renderAll();
     if (!c) return;
     document.querySelectorAll('.row.chg, .ln.chg').forEach(r => { r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash'); });
-    const keys = new Set(c.changes.filter(x => x.kind === 'status' && isDone(x.after)).map(x => tkey(x.path, x.block)));
+    const keys = new Set(c.changes.filter(x => x.kind === 'status' && isDoneIn(x.path, x.after)).map(x => tkey(x.path, x.block)));
     W.forEach((w, i) => { if ((w.kind === 'exec' && w.ran) || ((w.kind === 'needs' || w.kind === 'sync') && keys.has(w.src))) pulse(i); });
   }
   function setView(v) {
@@ -1008,7 +1026,7 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
     if (st) {
       const key = st.dataset.st, path = key.slice(0, key.indexOf('#')), b = task(key);
       const row = st.closest('.row');
-      const nx = (b.needs.length && !needsMet(b) && b.s === '-') ? null : nextStatus(path, b.s);
+      const nx = (b.needs.length && !needsMet(b) && b.s === roleCh(path, 'blocked')) ? null : nextStatus(path, b.s);
       if (!nx) { row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake'); return; }
       userSet(key, nx); return;
     }
@@ -1045,7 +1063,7 @@ button:focus-visible, .tr:focus-visible { outline: 2px solid var(--accent); outl
   window.addEventListener('pointerup', () => { pan = null; canvas.classList.remove('panning'); });
 
   // ── Boot: opening the vault reads everything and changes nothing ──
-  CHAINS.push({ id: ++chainSeq, time: clock(), trigger: 'open', title: 'Opened sample-vault', changes: [], notes: ['17 files read. Nothing was changed.'], noUndo: true });
+  CHAINS.push({ id: ++chainSeq, time: clock(), trigger: 'open', title: 'Opened sample-vault', changes: [], notes: ['18 files read. Nothing was changed.'], noUndo: true });
   setZoom(zoom);
   renderAll();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawWires);

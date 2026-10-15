@@ -441,8 +441,8 @@ button:focus-visible, .slot:focus-visible, .row:focus-visible, input:focus-visib
     if (t.check) return `<span class="ln">needs::</span> [[${NODE_OF[t.needs[0]].file.replace('.md', '')}#^${t.needs[0]}]]\n<span class="ln">contains::</span> "${t.word}"`;
     const refs = t.needs.map(s => `[[${NODE_OF[s].file.replace('.md', '')}#^${s}]]`).join(' ');
     return `- [${t.done ? 'x' : ' '}] ${esc(t.t)}${t.who.map(w => ` <span class="at">@${w}</span>`).join('')} ^${t.id}` +
-      (t.needs.length ? `\n  <span class="ln">needs::</span> ${refs}` : '') +
-      (t.sync ? `\n  <span class="ln">sync::</span> [[${NODE_OF[t.sync].file.replace('.md', '')}#^${t.sync}]]` : '');
+      (t.needs.length ? `\n  - <span class="ln">needs::</span> ${refs}` : '') +
+      (t.sync ? `\n  - <span class="ln">sync::</span> [[${NODE_OF[t.sync].file.replace('.md', '')}#^${t.sync}]]` : '');
   }
 
   function buildNodes() {

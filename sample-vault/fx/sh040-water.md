@@ -1,6 +1,6 @@
 # FX Water – sh040
 
-::statusformat:: [-] = ⚪ = cannot start, [ ] = 🔳 = ready to start, [?] = ❓ = ready to check, [x] = ✅ = Finished ::statusformat::
+::statusformat:: [-] = ⚪ = cannot start = blocked, [ ] = 🔳 = ready to start, [?] = ❓ = ready to check, [x] = ✅ = Finished ::statusformat::
 
 Water sim for the pier jump: splash, foam and wet-surface passes.
 

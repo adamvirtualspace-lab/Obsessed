@@ -257,7 +257,7 @@ Goal: browse and edit the vault.
 
 - **First:** open the project in Godot 4.7 and let it upgrade `project.godot`.
 - Main layout: file tree on the left, editor on the right.
-- Decide about the borderless window (`window/size/borderless` is currently on). Keeping it means building your own title bar, dragging and resizing.
+- The borderless window is off for now, so Windows draws the normal title bar. Turning it back on is in milestone 8.
 - Check emoji rendering early. A browser has no system fonts, so bundle a color emoji font (for example Noto Color Emoji) as a fallback font in your Theme.
 - **Learn:** containers (`HSplitContainer`, `VBoxContainer`), `Tree`, `TextEdit`/`CodeEdit`, `FileDialog`, `FileAccess`, `DirAccess`, signals, Themes.
 - **Done when:** you can pick `sample-vault/`, see its folders in the tree, open `anim/sh040.md`, edit and save it, and see the change in another editor. The emoji show in color.
@@ -318,6 +318,10 @@ Goal: prove the core idea works.
 
 - Turn markdown into BBCode for a `RichTextLabel` preview. It can't show HTML.
 - Themes (the violet and navy palettes from the mockups) and keyboard shortcuts.
+- Optional: a borderless window with your own title bar.
+  - **Turn it on in the editor:** Project → Project Settings → General → Display → Window → Size → tick **Borderless**. If you can't see it, switch on **Advanced Settings** at the top right of that window.
+  - **Or from code, while the app runs:** `get_window().borderless = true`.
+  - Without the Windows title bar you have to build your own: an `HBoxContainer` along the top with minimize (`get_window().mode = Window.MODE_MINIMIZED`) and close (`get_tree().quit()`) buttons. For dragging the window, check whether Godot 4.7 has `DisplayServer.window_start_drag()`. If it doesn't, move `get_window().position` yourself while the mouse is held down on your title bar.
 
 ### 9. Web mode
 
@@ -375,13 +379,15 @@ Reward the *flow* (shots cleared, bottlenecks broken), not individual people. Ra
 | 2026-10-15 | Docker only for hosting. |
 | 2026-10-15 | Wires live in the `.md` files (`needs::`, `sync::`, `^id`). Data that isn't a task goes in `.obsessed/` as JSON. |
 | 2026-10-15 | Each file can set its own statuses and emoji with `::statusformat::`. One format per file, and the last one wins. |
+| 2026-10-15 | Borderless window off while learning. It may come back in milestone 8 with a custom title bar. |
+| 2026-10-15 | Right-clicking a status anywhere opens a menu of every status in that file's format. |
+| 2026-10-15 | Status roles live in `::statusformat::` (`= open`, `= done`, `= blocked`). If no entry claims a role, plain markdown's defaults apply: `[ ]` is open and `[x]` is done. Blocked has no default. |
+| 2026-10-15 | Wire lines are sub-bullets (`  - needs:: …`), so each task line ends with its `^id`, where Obsidian looks for block IDs. |
 
 ## Open questions
 
-- The fixed meanings of `[ ]`, `[x]` and `[-]` (SYNTAX.md section 2): confirm.
 - Unblocking, retakes, clicking, the loop guard and outside edits (SYNTAX.md section 6): confirm. The full-app mockup turned up a loop guard problem: Text Check's *false* branch sends comp back to 🔁 retake right after you approved it, which is a second change to the same task in one chain. So the proposal is now that the click that starts a chain doesn't count toward the limit.
 - Main layout (Editor / Graph / Cards tabs) and the three node detail levels from the full-app mockup: confirm. (milestones 2 and 4)
 - Text Check only looks at the reply file when the event fires. If the reply gets written afterwards, should the check run again? (milestone 6)
-- Borderless window: keep it, or turn it off for now? (milestone 2)
 - Where the crew list lives (milestone 7).
 - Several users and where the wire engine runs (milestone 9).

@@ -8,8 +8,8 @@
 
 - [x] Model the boat @lia @teo ^boat
 - [-] Texture the boat @lia ^tex
-  needs:: [[#^boat]]
-  needs:: [[rig/hero#^r1]]
+  - needs:: [[#^boat]]
+  - needs:: [[rig/hero#^r1]]
 - [ ] Send to client, cc bob@example.com
 - [ ] Ping @bram when textures land ^ping
-  sync:: [[#^tex]]
+  - sync:: [[#^tex]]
