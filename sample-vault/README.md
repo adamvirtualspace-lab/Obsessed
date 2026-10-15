@@ -29,12 +29,15 @@ anim ─ ─ sync ─ ─► review/director-notes
 
 ## What each file shows
 
-| File | Status format |
-|---|---|
-| `rig/hero.md`, `anim/sh040.md`, `fx/sh040-water.md` | Format right after the title |
-| `lighting/sh040.md` | Format at the bottom of the file |
-| `comp/sh040.md` | Multi-line format with extra statuses (in progress, retake) |
-| `review/director-notes.md` | Its own emoji and only two statuses (no `[-]`) |
-| `audio/ep04.md` | No format, so it uses the built-in default |
-| `delivery/ep04.md` | `[x]` renamed to "Delivered" with 📦 |
-| `review/sh040-reply.md` | No tasks. Used by the Text Check node in milestone 6. |
+| File | Status format | Also |
+|---|---|---|
+| `rig/hero.md` | After the intro paragraph | A `## Notes` section after the tasks |
+| `anim/sh040.md`, `fx/sh040-water.md` | Right after the title | `## Tasks` and `## Notes` sections |
+| `lighting/sh040.md` | At the bottom of the file | |
+| `comp/sh040.md` | Multi-line, with extra statuses (in progress, retake) | |
+| `review/director-notes.md` | Its own emoji, and only two statuses (no `[-]`) | |
+| `audio/ep04.md` | None, so it uses the built-in default | |
+| `delivery/ep04.md` | `[x]` renamed to "Delivered" with 📦 | A **Shot status** line that the Find & Replace node edits, and a `## Tasks` heading that Append Line adds lines under |
+| `review/sh040-reply.md` | None | No tasks. The Text Check node reads it. |
+
+The operator nodes from the full-app mockup (`docs/mockups/obsessed-app.html`) aren't saved in this vault yet. Their file format (`.obsessed/flows/`) gets decided in milestone 6.

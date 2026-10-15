@@ -17,11 +17,104 @@ On top of that sits a **card layer** inspired by Balatro: tasks are the enemies,
 
 ## The screens
 
-> These images are rendered from the HTML mockups in `docs/mockups/`. They're early ideation, so details will change. To regenerate them after editing a mockup, run `bash docs/mockups/render-screens.sh` in Git Bash.
+> These images are rendered from the HTML mockups in `docs/mockups/`. They're ideation, so details will change. To regenerate them after editing a mockup, run `bash docs/mockups/render-screens.sh` in Git Bash.
+>
+> The first sections come from the full-app mockup, `obsessed-app.html`. It reads its content from `sample-vault/` (a check confirmed its file output matches the vault exactly) and follows SYNTAX.md, including statuses, chain reactions and undo. It's clickable, so open it in a browser and try it. The sections from [Flow view](#flow-view) on come from the two earlier mockups.
+
+### Main layout
+
+The whole app in one window, like Obsidian: the vault on the left, the current view in the middle, and what the app has done on the right.
+
+![Main layout with the graph](docs/images/app-graph-full.png)
+
+| Piece | What it does | Godot to look at |
+|---|---|---|
+| Top bar | Switches between **Editor**, **Graph** and (later) **Cards**. The palette toggle sits on the right. | `TabBar`, or `Button`s in a `ButtonGroup` |
+| Vault tree | Folders and files. Each file shows its tasks as a row of status emoji, plus ⚠ if it has problems. | `Tree` with two columns: the name, and the emoji strip as text |
+| Flows | Saved graphs. A flow picks which files appear in the graph and holds its operator nodes. Saved in `.obsessed/flows/`. | More `Tree` items, or an `ItemList` |
+| Center | The current view. | A `TabContainer` with its tabs hidden, or show and hide the views yourself |
+| Activity | Everything the app changed, newest first, with Undo. See [Chain reactions and the log](#chain-reactions-and-the-log). | `ScrollContainer` + `VBoxContainer` |
+| Warnings | Problems found while reading files. Click one to jump to its line. | The same, with one `Button` per warning |
+| Columns | Three resizable columns. | Two nested `HSplitContainer`s |
+
+### Editor and statuses
+
+The raw markdown is on the left and a live preview on the right. The chips along the top are this file's own `::statusformat::`, and `comp/sh040.md` adds 🎨 in progress and 🔁 retake. Right-clicking a status opens the picker:
+- ⚪ is greyed out because this task's `needs::` wires control it.
+- 🔁 retake sits under "Right-click only" because it comes after ✅ in the format, so clicking never lands on it.
+
+The Warnings list shows the four problems planted in `_parser-tests/`.
+
+![Editor with the status picker open](docs/images/app-editor.png)
+
+| Piece | Godot to look at |
+|---|---|
+| Markdown pane with line numbers and colors | `CodeEdit` (`gutters_draw_line_numbers`) with a `SyntaxHighlighter`. `CodeHighlighter` can color regions like `::statusformat::`. For the rest, extend `SyntaxHighlighter` and override `_get_line_syntax_highlighting()`. |
+| Lines changed by wires | `TextEdit.set_line_background_color()` |
+| Preview | Headings and paragraphs can be `RichTextLabel`s (milestone 8). Make each task row its own scene, so the status is a real `Button` you can click. |
+| Status chips | `HFlowContainer` with small `PanelContainer`s |
+| Status picker | `PopupMenu`: `add_item()`, `add_separator("Right-click only")`, `set_item_disabled()` |
+
+### Node detail levels
+
+Each file node can show more or less of its file:
+- **Full** (the picture under [Main layout](#main-layout)) shows headings, notes and the `needs::` chips. The node header also shows the file's status format, so you can see at a glance which statuses it uses.
+- **Tasks** shows only the task rows.
+- **Compact** shrinks each file to one line of status emoji and a progress bar. That's how a whole flow fits on one screen:
+
+![Compact nodes](docs/images/app-graph-compact.png)
+
+Godot: show or hide the node's children for each level, then call `reset_size()` on the `GraphNode` so it shrinks. You could also switch levels automatically by reading `GraphEdit.zoom`.
+
+### Operator nodes
+
+These are Blueprint-style nodes that aren't files. Red means event, blue means condition, green means action. White ▶ pins and wires are **exec** (what runs next). Blue ● pins are **data** (which task or file).
+
+![Operator nodes before anything runs](docs/images/app-operators.png)
+
+The ep04-sh040 flow has two small chains:
+1. **When** *Comp pass sh040* becomes ✅ → **Text Check**: does `review/sh040-reply.md` contain "approved"?
+   - *true* → **Append Line** `- [ ] Upload sh040 to client @bram` under `## Tasks` in `delivery/ep04.md`.
+   - *false* → **Set Status**: send *Comp pass sh040* to 🔁 retake.
+2. **When** *Deliver sh040 to edit* becomes 📦 → **Find & Replace** "sh040 in comp" with "sh040 delivered" in `delivery/ep04.md` → **Set Status** *Update shot status* to 📦.
+
+| Piece | Godot to look at |
+|---|---|
+| Pins | `GraphNode.set_slot()`. Give exec, task and file pins different slot types. `GraphEdit` only connects matching types unless you call `add_valid_connection_type()`, so nobody can plug a file into an exec pin. Use `custom_icon_left` / `custom_icon_right` for the ▶ shape. |
+| Colored headers | The `GraphNode`'s `titlebar` theme style box |
+| Fields | `LineEdit` or `OptionButton` inside the node's rows |
+| TRUE / RAN pills | `Label` with a `StyleBoxFlat` |
+
+### Adding nodes
+
+![Add node menu](docs/images/app-add-node.png)
+
+Grey items marked "later" need something that doesn't exist yet, like a scheduler or web mode. Godot: `GraphEdit` emits `popup_request` when you right-click the canvas, so the same menu can open there too.
+
+### Chain reactions and the log
+
+Here every task from rig to delivery has been ticked: the full run from milestone 5. Each click starts a **chain**, and the Activity panel lists every change in it, with file and line.
+- Approving comp ran the first operator chain. Text Check returned TRUE, so the upload task was added to delivery.
+- Delivering ran the second. The shot status line now says "sh040 delivered", and *Update shot status* is 📦.
+- The exec wires that ran in the newest chain are bright white.
+
+![After the full chain](docs/images/app-chain.png)
+
+**Undo** only appears on the newest chain, and it undoes the whole chain at once. Press it again to undo the chain before.
+
+Godot: `UndoRedo` does this. Make one action per chain with `create_action()`, add a do and an undo method for each change, then call `commit_action()`. For the bright wires, look at `GraphEdit.set_connection_activity()`.
+
+### Outside edits and warnings
+
+Here someone set *Comp pass sh040* to 🎨 in progress in Obsidian, before lighting and FX were done. The app re-reads the file and logs it as an **Outside edit**. There's no Undo, because the app didn't make the change. It also flags the task four ways: a yellow node border, a "⚠ needs not met" badge, ⚠ in the tree, and a new entry under Warnings.
+
+![Outside edit](docs/images/app-outside-edit.png)
+
+Godot: use a `Timer` that compares `FileAccess.get_modified_time()` for each file. Clicking a warning opens the file and moves the cursor there with `set_caret_line()`.
 
 ### Flow view
 
-The main idea: every `.md` file is a node, every task is a row, and wires show what waits on what.
+This is the first mockup, `obsessed-flow.html`, made before status formats existed. Every `.md` file is a node, every task is a row, and wires show what waits on what.
 
 ![Flow view](docs/images/flow-overview.png)
 
@@ -46,7 +139,7 @@ The **Markdown** toggle shows the same nodes as the plain text that's really in 
 
 ![Nodes showing their markdown](docs/images/flow-markdown.png)
 
-> The mockups were made before [`::statusformat::`](SYNTAX.md#2-status-format). Real nodes will show each file's own symbols (⚪ 🔳 ❓ ✅ …) instead of a plain checkbox and lock.
+> The flow and hand mockups were made before [`::statusformat::`](SYNTAX.md#2-status-format), so they show a plain checkbox and lock. The full-app mockup above shows each file's own symbols (⚪ 🔳 ❓ ✅ …).
 
 ### Firing wires
 
@@ -97,11 +190,9 @@ Godot: each palette is a `Theme` resource that you can swap at runtime. A second
 
 These parts of the idea don't have a picture yet. They're worth sketching before their milestone starts:
 
-- **The main layout:** the file tree on the left (like Obsidian), the editor, and how you switch between the editor, the graph and the card view. (Milestone 2)
-- **Emoji statuses:** rows drawing each file's own `::statusformat::` symbols, plus ⚠ for an unknown status and a warning badge when a status disagrees with its `needs::`. (Milestones 3 to 5)
-- **What a file node shows besides tasks:** headings, notes and other text in the file. (Milestone 4)
-- **The log and undo panel:** the list of changes wires have made. (Milestone 5)
-- **More operator nodes:** Find & Replace, Set Status, Append Line. (Milestone 6)
+- **Drawing a wire by hand:** dragging from a pin to a task writes `needs::` into the file and adds a `^id` if the task needs one. (Milestone 5)
+- **Retakes:** sending an approved task back. Right-click → 🔁 retake already works in the full-app mockup, but there's no picture of it yet. (Milestone 5)
+- **The Cards tab:** the card hand inside the main layout. For now it only exists in its own mockup, [Card hand](#card-hand). (Milestone 7)
 - **The Balatro layer:** enemies with HP, a Jokers row for always-on automations, boss blinds. (Milestone 7 onwards)
 
 ## Tech
@@ -143,7 +234,7 @@ Obsessed/
 ├─ SYNTAX.md          # the markdown rules (the contract)
 ├─ sample-vault/      # test notes to develop against
 ├─ docs/
-│  ├─ mockups/        # HTML ideation mockups (look and feel only) + render-screens.sh
+│  ├─ mockups/        # HTML mockups: obsessed-app (full app), obsessed-flow, obsessed-hand + render-screens.sh
 │  └─ images/         # PNGs of the mockups, shown in this plan
 └─ backend/           # FastAPI server, added in milestone 9
 ```
@@ -162,7 +253,7 @@ PLAN.md, SYNTAX.md, sample-vault and the mockups are all in the repo.
 
 Goal: browse and edit the vault.
 
-**Looks like:** not mocked up yet. See [Not in the mockups yet](#not-in-the-mockups-yet).
+**Looks like:** [Main layout](#main-layout) and [Editor and statuses](#editor-and-statuses).
 
 - **First:** open the project in Godot 4.7 and let it upgrade `project.godot`.
 - Main layout: file tree on the left, editor on the right.
@@ -175,6 +266,8 @@ Goal: browse and edit the vault.
 
 Goal: turn a `.md` file into task data, and back again.
 
+**Looks like:** the four parser-test problems under Warnings in [Editor and statuses](#editor-and-statuses).
+
 - Read tasks, the status format, `@people`, `^ids`, `needs::` and `sync::` as described in SYNTAX.md.
 - Change one task's status and write the file back with every other character untouched.
 - **Learn:** `RegEx`, `String` methods, your own classes (`class_name`, `RefCounted`), Arrays and Dictionaries, unit tests (the GUT or gdUnit4 addon).
@@ -184,7 +277,7 @@ Goal: turn a `.md` file into task data, and back again.
 
 Goal: prove the core idea works.
 
-**Looks like:** [Firing wires](#firing-wires).
+**Looks like:** [Firing wires](#firing-wires) and [Node detail levels](#node-detail-levels).
 
 - A `GraphEdit` canvas. Each `.md` file is a `GraphNode` and each task is a row with ports.
 - Draw the `needs::` wires the files describe.
@@ -194,7 +287,7 @@ Goal: prove the core idea works.
 
 ### 5. Wire engine
 
-**Looks like:** [Flow view](#flow-view).
+**Looks like:** [Chain reactions and the log](#chain-reactions-and-the-log) and [Outside edits and warnings](#outside-edits-and-warnings).
 
 - `sync::` wires, custom statuses, clicking and right-click to change status, chain reactions, loop guard, log and undo.
 - Drawing a wire in the graph writes `needs::` or `sync::` into the file, and adds a `^id` if the task doesn't have one.
@@ -203,11 +296,12 @@ Goal: prove the core idea works.
 
 ### 6. Operator nodes
 
-**Looks like:** the Text Check node in [Flow view](#flow-view).
+**Looks like:** [Operator nodes](#operator-nodes) and [Adding nodes](#adding-nodes).
 
-- Nodes that aren't files: Text Check, Find & Replace, Set Status, Append Line, and so on.
-- Design the `.obsessed/` JSON format for node positions and operator nodes.
-- **Done when:** the mockup's Text Check works. *Deliver sh040 to edit* only unlocks once comp is approved and `review/sh040-reply.md` contains "approved".
+- Nodes that aren't files: events, conditions and actions (Text Check, Find & Replace, Set Status, Append Line, and so on).
+- Design the `.obsessed/flows/` JSON format: which files are in a flow, where each node sits, the operator nodes and their exec wires.
+- **Learn:** `GraphNode` slot types and custom pin icons, `GraphEdit.add_valid_connection_type()`, the `popup_request` signal, saving and loading with `JSON`.
+- **Done when:** both chains in the ep04-sh040 flow behave as in [Chain reactions and the log](#chain-reactions-and-the-log). Approving comp adds the upload task to delivery, or sends comp to 🔁 retake if the reply doesn't say "approved". Delivering updates the shot status line.
 
 ### 7. Cards
 
@@ -285,9 +379,9 @@ Reward the *flow* (shots cleared, bottlenecks broken), not individual people. Ra
 ## Open questions
 
 - The fixed meanings of `[ ]`, `[x]` and `[-]` (SYNTAX.md section 2): confirm.
-- Unblocking, retakes and clicking (SYNTAX.md section 6): confirm.
+- Unblocking, retakes, clicking, the loop guard and outside edits (SYNTAX.md section 6): confirm. The full-app mockup turned up a loop guard problem: Text Check's *false* branch sends comp back to 🔁 retake right after you approved it, which is a second change to the same task in one chain. So the proposal is now that the click that starts a chain doesn't count toward the limit.
+- Main layout (Editor / Graph / Cards tabs) and the three node detail levels from the full-app mockup: confirm. (milestones 2 and 4)
+- Text Check only looks at the reply file when the event fires. If the reply gets written afterwards, should the check run again? (milestone 6)
 - Borderless window: keep it, or turn it off for now? (milestone 2)
-- Main layout: how do you switch between the editor, the graph and the card view? (milestone 2)
-- What a file node shows besides its tasks (milestone 4).
 - Where the crew list lives (milestone 7).
 - Several users and where the wire engine runs (milestone 9).

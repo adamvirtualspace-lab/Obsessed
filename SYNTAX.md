@@ -140,15 +140,15 @@ A wire is written on the task that **receives** it (the downstream task), the sa
 - **Opening doesn't edit:** opening a vault never changes files. If a task's saved status disagrees with its `needs::`, it gets a warning badge until something changes.
 - **Clicking:** a click moves a task to the next status in its format's order and skips `[-]`. Clicking `[x]` does nothing, so an approved shot can't be un-approved by accident. Right-click opens a list of every status in the format. Statuses listed after `[x]` (like a retake) can only be reached that way.
 - **Blocked tasks** can't be clicked while their `needs::` aren't met. A `[-]` task with no `needs::` was blocked by hand, so it can be changed normally.
-- **Loop guard:** within one chain reaction, each task changes at most once. If the chain tries to change a task a second time, the chain stops and the app reports the loop.
-- **Log and undo:** every change a wire makes is logged with the file, line, old status and new status. A whole chain reaction undoes as one step.
+- **Loop guard:** within one chain reaction, wires and operator nodes can change each task at most once. If the chain tries to change a task a second time, that change is skipped and the app reports the loop. The change that started the chain doesn't count, so a flow can still send a task straight back (for example ✅ → 🔁 retake when a Text Check fails).
+- **Log and undo:** every change a wire or operator node makes is logged with the file, line, old value and new value. A whole chain reaction undoes as one step, newest chain first.
+- **Outside edits:** when a file changes outside the app (Obsidian, VS Code, `git pull`), the app re-reads it. Status changes in it fire wires like any other change, so people using other tools don't break the pipeline. They show in the log as outside edits and can't be undone from the app.
 
 ## 7. The `.obsessed/` folder
 
 This folder sits at the vault root and holds everything that isn't a task:
 
-- where nodes sit in the graph
-- operator nodes (Text Check, Find & Replace, Set Status, ...)
+- `flows/<name>.json`: one file per flow (a saved graph). It lists which files appear in the flow, where each node sits, the operator nodes (Text Check, Find & Replace, Set Status, ...) and the exec wires between them.
 - vault settings, like a vault-wide default status format
 
 The files are JSON, and the exact format gets decided in milestone 6. You never need to edit them by hand.
@@ -170,6 +170,10 @@ The files are JSON, and the exact format gets decided in milestone 6. You never 
 
 ```md
 # Lighting – sh040
+
+Late-afternoon sun, warm key from camera left.
+
+## Tasks
 
 - [x] Key and fill setup @maya @unit7 ^l1
 - [-] Render lighting pass @maya @unit7 ^l2
