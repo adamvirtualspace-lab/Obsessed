@@ -260,6 +260,16 @@ Goal: browse and edit the vault.
 - The borderless window is off for now, so Windows draws the normal title bar. Turning it back on is in milestone 8.
 - Check emoji rendering early. A browser has no system fonts, so bundle a color emoji font (for example Noto Color Emoji) as a fallback font in your Theme.
 - **Learn:** containers (`HSplitContainer`, `VBoxContainer`), `Tree`, `TextEdit`/`CodeEdit`, `FileDialog`, `FileAccess`, `DirAccess`, signals, Themes.
+- **Bricks.** Do one at a time and tick it off when it works. A small git commit after each brick is a good habit.
+  - [ ] 1. First scene: a `Main` scene that fills the window and runs with F5
+  - [ ] 2. Three-column layout from containers, with placeholder panels only
+  - [ ] 3. First script: `_ready()`, `print()` and the Output panel
+  - [ ] 4. List the vault's folders and files with `DirAccess`
+  - [ ] 5. Show them in a `Tree`
+  - [ ] 6. Click a file to open it in a `CodeEdit` (your first signal)
+  - [ ] 7. Save with Ctrl+S (`FileAccess`, input actions)
+  - [ ] 8. Pick any vault folder with a `FileDialog`, and remember it next time
+  - [ ] 9. Emoji: a color emoji font as a fallback in a `Theme`
 - **Done when:** you can pick `sample-vault/`, see its folders in the tree, open `anim/sh040.md`, edit and save it, and see the change in another editor. The emoji show in color.
 
 ### 3. Task parser
@@ -383,10 +393,10 @@ Reward the *flow* (shots cleared, bottlenecks broken), not individual people. Ra
 | 2026-10-15 | Right-clicking a status anywhere opens a menu of every status in that file's format. |
 | 2026-10-15 | Status roles live in `::statusformat::` (`= open`, `= done`, `= blocked`). If no entry claims a role, plain markdown's defaults apply: `[ ]` is open and `[x]` is done. Blocked has no default. |
 | 2026-10-15 | Wire lines are sub-bullets (`  - needs:: …`), so each task line ends with its `^id`, where Obsidian looks for block IDs. |
+| 2026-10-15 | SYNTAX.md section 6 confirmed: unblocking, retakes, clicking, the right-click menu, the loop guard (the click that starts a chain doesn't count), log and undo, and outside edits firing wires. |
 
 ## Open questions
 
-- Unblocking, retakes, clicking, the loop guard and outside edits (SYNTAX.md section 6): confirm. The full-app mockup turned up a loop guard problem: Text Check's *false* branch sends comp back to 🔁 retake right after you approved it, which is a second change to the same task in one chain. So the proposal is now that the click that starts a chain doesn't count toward the limit.
 - Main layout (Editor / Graph / Cards tabs) and the three node detail levels from the full-app mockup: confirm. (milestones 2 and 4)
 - Text Check only looks at the reply file when the event fires. If the reply gets written afterwards, should the check run again? (milestone 6)
 - Where the crew list lives (milestone 7).

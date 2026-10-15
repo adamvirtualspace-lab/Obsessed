@@ -4,7 +4,7 @@ This file is the contract. The parser, the node graph, the web server and anyone
 
 Everything here is plain markdown. A vault written for Obsessed still opens in Obsidian, VS Code or GitHub; those tools just don't run the wires.
 
-> Draft v0.2, 2026-10-15. Parts marked **Proposed** need a final yes before they get built.
+> v0.2, 2026-10-15. Everything in this file is agreed. New ideas go under [Ideas for later](#ideas-for-later-not-in-v02) until they are.
 
 ## 1. Tasks
 
@@ -149,7 +149,7 @@ A wire is written on the task that **receives** it (the downstream task), the sa
 - Separate several links in one field with commas or spaces.
 - A field can appear on more than one sub-bullet; the links add up.
 
-## 6. Behaviour (Proposed)
+## 6. Behaviour
 
 "Open", "done" and "blocked" below mean the statuses with those roles in each file's format (section 2).
 
